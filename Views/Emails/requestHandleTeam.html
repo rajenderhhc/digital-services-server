@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Requirement Received Alert</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 20px;
+      }
+      .container {
+        max-width: 600px;
+        background: #ffffff;
+        padding: 20px;
+        margin: auto;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        color: #333;
+      }
+      p {
+        margin: 10px 0;
+      }
+      .details {
+        background: #f9f9f9;
+        padding: 10px;
+        border-radius: 5px;
+      }
+      a {
+        color: #007bff;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>New Digital Service Request - {{service.service_name}}</h2>
+
+      <p>Dear Team,</p>
+
+      <p>
+        A new service request has been submitted and assigned to your team.
+        Please review the details and proceed accordingly.
+      </p>
+
+      <div class="details">
+        <p><strong>Service:</strong> {{service.service_name}}</p>
+        <p><strong>Request ID:</strong> {{service.request_id}}</p>
+        <p><strong>Requested By:</strong> {{service.emp_name}}</p>
+        <p><strong>Requested On:</strong> {{service.created_at}}</p>
+      </div>
+
+      <p>
+        Please update the request status in the dashboard:
+        <a href="http://apps.hhclservices.com/digitalservices" target="_blank"
+          >Dashboard</a
+        >
+      </p>
+
+      <p>For any clarifications, contact the project administrator.</p>
+
+      <p>Best Regards,</p>
+      <p>Hetero Healthcare Ltd</p>
+    </div>
+  </body>
+</html>

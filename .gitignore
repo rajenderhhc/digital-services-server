@@ -1,0 +1,9 @@
+#GIT IGNORE FILES AND FOLDERS
+/node_modules
+/.env
+/unused.js
+/uploads
+
+
+
+
