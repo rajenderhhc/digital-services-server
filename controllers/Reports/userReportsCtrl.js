@@ -1,26 +1,29 @@
-const { db } = require('../../dbConfig');
-const catchAsync = require('../../Utils/catchAsync');
+const { db } = require("../../dbConfig");
+const catchAsync = require("../../Utils/catchAsync");
+const { hirarchyFilter } = require("../../Utils/hirarchyFilter");
 
 const currentYear = new Date().getFullYear();
 
 const monthNames = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 exports.getRequestCout = catchAsync(async (req, res, next) => {
   const { year = currentYear } = req.params;
-  const { emp_code } = req.user;
+
+  const { query: filterQuery, values } = await hirarchyFilter(req.user);
+
 
   const query = `
   SELECT 
@@ -28,12 +31,14 @@ exports.getRequestCout = catchAsync(async (req, res, next) => {
     COUNT(CASE WHEN submit_status = 0 THEN 1 END) AS pending_count,
     COUNT(CASE WHEN submit_status = 1 THEN 1 END) AS complete_count
   FROM tbl_doctor_services
-  WHERE status = 1 AND (tse_code = ? OR created_by = ?) AND DATE_FORMAT(created_at, '%Y') = ?
+  WHERE status = 1 AND ${filterQuery} AND DATE_FORMAT(created_at, '%Y') = ?
   GROUP BY DATE_FORMAT(created_at, '%b'), MONTH(created_at)
   ORDER BY MONTH(created_at)
 `;
 
-  const result = await db(query, [emp_code, emp_code, year]);
+
+
+  const result = await db(query, [...values, year]);
 
   const monthWiseCount = [];
 
@@ -66,7 +71,8 @@ exports.getRequestCout = catchAsync(async (req, res, next) => {
 
 exports.getAdminApproveCout = catchAsync(async (req, res, next) => {
   const { year = currentYear } = req.params;
-  const { emp_code } = req.user;
+
+  const { query: filterQuery, values } = await hirarchyFilter(req.user);
   //NOT IN (2, 15)
   const query = ` SELECT 
                     MONTH(created_at) AS month_number,
@@ -77,12 +83,12 @@ exports.getAdminApproveCout = catchAsync(async (req, res, next) => {
                     WHERE 
                     status = 1 AND 
                     submit_status = 1 AND 
-                    (tse_code = ? OR created_by = ?) AND 
+                    ${filterQuery} AND 
                     YEAR(created_at) = ?
                     GROUP BY MONTH(created_at) WITH ROLLUP
                 `;
 
-  const result = await db(query, [emp_code, emp_code, year]);
+  const result = await db(query, [...values, year]);
 
   let yearTotalCount = {
     pending_count: 0,
@@ -92,7 +98,7 @@ exports.getAdminApproveCout = catchAsync(async (req, res, next) => {
   };
 
   const monthDataMap = {};
-  const YmonthNames = ['', ...monthNames];
+  const YmonthNames = ["", ...monthNames];
 
   result.forEach((row) => {
     if (row.month_number === null) {
@@ -140,7 +146,8 @@ exports.getAdminApproveCout = catchAsync(async (req, res, next) => {
 
 exports.serviceUsageCount = catchAsync(async (req, res, next) => {
   const { year = currentYear } = req.params;
-  const { emp_code } = req.user;
+
+  const { query: filterQuery, values } = await hirarchyFilter(req.user);
 
   const query = `
     SELECT 
@@ -150,12 +157,12 @@ exports.serviceUsageCount = catchAsync(async (req, res, next) => {
     FROM tbl_doctor_services DOCS
     LEFT JOIN tbl_digital_services DS ON DOCS.service_id = DS.id
     WHERE  DOCS.status = 1 
-      AND (DOCS.tse_code = ? OR DOCS.created_by = ?) 
+      AND ${filterQuery} 
       AND YEAR(DOCS.created_at) = ?
     GROUP BY DOCS.service_id, DS.service_name
     ORDER BY  value ASC
   `;
 
-  const result = await db(query, [emp_code, emp_code, year]);
+  const result = await db(query, [...values, year]);
   res.status(200).json(result);
 });

@@ -1,18 +1,10 @@
-const { db } = require('../dbConfig');
-const moment = require('moment');
-const catchAsync = require('../Utils/catchAsync');
-const Email = require('../Utils/email');
-const AppError = require('../Utils/appError');
-const SMS = require('../Utils/sms');
-const axios = require('axios');
-
-const getHirachyDetails = async (empId) => {
-  const url = `https://apisfadoctors.heterohealthcare.com/api/MultilevelHierarchy/${empId}`;
-  const response = await axios.get(url);
-  const { data } = response;
-  const hirarchyIds = data.map((e) => e.employeeCode);
-  return hirarchyIds;
-};
+const { db } = require("../dbConfig");
+const moment = require("moment");
+const catchAsync = require("../Utils/catchAsync");
+const Email = require("../Utils/email");
+const AppError = require("../Utils/appError");
+const SMS = require("../Utils/sms");
+const { hirarchyFilter } = require("../Utils/hirarchyFilter");
 
 exports.seriveForms = catchAsync(async (req, res, next) => {
   const { service_id } = req.params;
@@ -48,36 +40,29 @@ exports.getServices = catchAsync(async (req, res, next) => {
   const { empId, limit, pageNumber = 1, serviceId, status } = req.body;
   const offset = limit * (pageNumber - 1);
 
-  const filters = ['DOCS.status = 1'];
+  const filters = ["DOCS.status = 1"];
   const filterValues = [];
 
   if (empId) {
-    filters.push('DOCS.created_by = ?');
+    filters.push("DOCS.created_by = ?");
     filterValues.push(empId);
   } else {
-    if (req.user.designation_id === '23') {
-      const divisionIds = req.user.division_id.split('~');
-      filters.push('DOCS.division_id IN (?)');
-      filterValues.push(divisionIds);
-    } else {
-      filters.push('DOCS.created_by IN (?)');
-      const hirarchyIds = await getHirachyDetails(req.user.emp_code);
-
-      filterValues.push(hirarchyIds);
-    }
+    const { query, values } = await hirarchyFilter(req.user,"DOCS.");
+    filters.push(query);
+    filterValues.push(...values);
   }
 
   if (serviceId) {
-    filters.push('DOCS.service_id = ?');
+    filters.push("DOCS.service_id = ?");
     filterValues.push(serviceId);
   }
 
   if (status) {
-    filters.push('DOCS.submit_status = ?');
+    filters.push("DOCS.submit_status = ?");
     filterValues.push(status);
   }
 
-  const filterQuery = filters.join(' AND ');
+  const filterQuery = filters.join(" AND ");
 
   const serviresQuery = `SELECT request_id,
                               doctor_id,
@@ -107,8 +92,8 @@ exports.getServices = catchAsync(async (req, res, next) => {
   );
 
   res.status(200).json({
-    status: 'success',
-    message: 'Data Retrieved successfully',
+    status: "success",
+    message: "Data Retrieved successfully",
     data: { total_records: total_records.total, services_list: services },
   });
 });
@@ -157,8 +142,8 @@ exports.getDoctorServices = catchAsync(async (req, res, next) => {
   const doc_services = await db(getQuery, values);
 
   res.status(200).json({
-    status: 'success',
-    message: 'Data Retrieved successfully',
+    status: "success",
+    message: "Data Retrieved successfully",
     data: doc_services,
   });
 });
@@ -183,15 +168,15 @@ exports.registerService = catchAsync(async (req, res, next) => {
   const result = await db(query, values);
 
   res.status(200).json({
-    status: 'success',
-    message: 'Your Service Request Submitted Successfully',
+    status: "success",
+    message: "Your Service Request Submitted Successfully",
     data: { requestId },
   });
 });
 
 exports.submitService = catchAsync(async (req, res, next) => {
   const { requestId } = req.body;
-  const today = moment().format('YYYY-MM-DD HH:mm:ss');
+  const today = moment().format("YYYY-MM-DD HH:mm:ss");
 
   const insertQuery = `
       UPDATE tbl_doctor_services 
@@ -199,8 +184,8 @@ exports.submitService = catchAsync(async (req, res, next) => {
       WHERE request_id = ?`;
   await db(insertQuery, [today, req.user.emp_code, requestId]);
   res.status(200).json({
-    status: 'success',
-    message: 'Your Service Request Submitted Successfully',
+    status: "success",
+    message: "Your Service Request Submitted Successfully",
     data: { requestId },
   });
   next();
@@ -209,7 +194,7 @@ exports.submitService = catchAsync(async (req, res, next) => {
 exports.addNewService = catchAsync(async (req, res, next) => {
   const { doctorCode, serviceId, tseCode, requestId, divisionId } = req.body;
 
-  const today = moment().format('YYYY-MM-DD HH:mm:ss');
+  const today = moment().format("YYYY-MM-DD HH:mm:ss");
 
   const query = `INSERT INTO tbl_doctor_services (request_id,doctor_id, service_id, tse_code, 
                     division_id,submit_status,submit_on,approval_status,created_by,submited_by)
@@ -231,8 +216,8 @@ exports.addNewService = catchAsync(async (req, res, next) => {
   const result = await db(query, values);
 
   res.status(200).json({
-    status: 'success',
-    message: 'Your Service Request Submitted Successfully',
+    status: "success",
+    message: "Your Service Request Submitted Successfully",
     data: { requestId },
   });
 
@@ -253,7 +238,7 @@ exports.addServiceTrack = async (req, res, next) => {
     const [fetchResult] = await db(fetchQuery, [requestId]);
 
     if (!fetchResult) {
-      return next(new AppError('Updated service record not found.', 404));
+      return next(new AppError("Updated service record not found.", 404));
     }
 
     // Insert tracking entry
@@ -283,17 +268,17 @@ exports.addServiceTrack = async (req, res, next) => {
     const mailToList = [];
     const mailToNames = [];
     const mailCcList = [];
-    let alternateTo = '';
-    let alternateToName = '';
+    let alternateTo = "";
+    let alternateToName = "";
 
     teamMembers.forEach((member) => {
       // Safely parse divisions and service
-      if (member.role === 'Coordinator') {
+      if (member.role === "Coordinator") {
         mailToList.push(member.mail_id);
         mailToNames.push(member.emp_name);
       } else {
         mailCcList.push(member.mail_id);
-        if (member.emp_id === '11903') {
+        if (member.emp_id === "11903") {
           alternateTo = member.mail_id;
           alternateToName = member.emp_name;
         }
@@ -341,8 +326,8 @@ exports.serviceDetails = catchAsync(async (req, res, next) => {
   const [result] = await db(query, [requestId]);
 
   res.status(200).json({
-    status: 'success',
-    message: 'Service details fetched successfully',
+    status: "success",
+    message: "Service details fetched successfully",
     data: result || {},
   });
 });
@@ -371,8 +356,8 @@ exports.getServiceHistory = catchAsync(async (req, res, next) => {
   const result = await db(query, [reqId]);
 
   res.status(200).json({
-    status: 'success',
-    message: 'Service details fetched successfully',
+    status: "success",
+    message: "Service details fetched successfully",
     data: result,
   });
 });
