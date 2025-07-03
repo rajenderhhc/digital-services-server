@@ -61,7 +61,7 @@ const sendErrProd = (err, res) => {
 module.exports = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || "error";
-  // console.log(err);
+  console.log(err);
   const { statusCode, status, message = "" } = err;
   const errQyery = `INSERT INTO tbl_error_logs ( err_code, err_status, err_message) VALUES (?,?,?)`;
   db(errQyery, [statusCode, status, message]);

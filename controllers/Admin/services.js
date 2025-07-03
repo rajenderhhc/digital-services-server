@@ -1,8 +1,8 @@
-const { db } = require('../../dbConfig');
-const AppError = require('../../Utils/appError');
-const catchAsync = require('../../Utils/catchAsync');
-const ExcelJS = require('exceljs');
-const axios = require('axios');
+const { db } = require("../../dbConfig");
+const AppError = require("../../Utils/appError");
+const catchAsync = require("../../Utils/catchAsync");
+const ExcelJS = require("exceljs");
+const axios = require("axios");
 
 exports.getServices = catchAsync(async (req, res, next) => {
   const {
@@ -25,69 +25,69 @@ exports.getServices = catchAsync(async (req, res, next) => {
   // Safely parse JSON to prevent errors
   const parseJSON = (value) => {
     try {
-      return JSON.parse(value || '[]');
+      return JSON.parse(value || "[]");
     } catch (error) {
       return [];
     }
   };
 
-  const filters = ['DOCS.status = 1', 'DOCS.submit_status = 1'];
+  const filters = ["DOCS.status = 1", "DOCS.submit_status = 1"];
   const filterValues = [];
 
   // Apply division filter correctly
-  const parsedDivisions = divisions !== 'All' && parseJSON(divisions);
+  const parsedDivisions = divisions !== "All" && parseJSON(divisions);
   if (Array.isArray(parsedDivisions) && parsedDivisions.length > 0) {
-    const placeholders = parsedDivisions.map(() => '?').join(', ');
+    const placeholders = parsedDivisions.map(() => "?").join(", ");
     filters.push(`DOCS.division_id IN (${placeholders})`);
     filterValues.push(...parsedDivisions);
   }
 
   // Apply service filter correctly
-  const parsedServices = services !== 'All' && parseJSON(services);
+  const parsedServices = services !== "All" && parseJSON(services);
   if (Array.isArray(parsedServices) && parsedServices.length > 0) {
-    const placeholders = parsedServices.map(() => '?').join(', ');
+    const placeholders = parsedServices.map(() => "?").join(", ");
     filters.push(`DOCS.service_id IN (${placeholders})`);
     filterValues.push(...parsedServices);
   }
 
   // Apply empId filter
   if (empId) {
-    filters.push('(DOCS.created_by = ? OR DOCS.tse_code = ?)');
+    filters.push("(DOCS.created_by = ? OR DOCS.tse_code = ?)");
     filterValues.push(empId, empId);
   }
 
   // Apply service filter
   if (service) {
-    filters.push('DOCS.service_id = ?');
+    filters.push("DOCS.service_id = ?");
     filterValues.push(service);
   }
 
   // Apply approval status filter
   if (status) {
-    filters.push('DOCS.approval_status = ?');
+    filters.push("DOCS.approval_status = ?");
     filterValues.push(status);
   }
 
   //   division: 3,
 
   if (division) {
-    filters.push('DOCS.division_id = ?');
+    filters.push("DOCS.division_id = ?");
     filterValues.push(division);
   }
 
   // Date filters
   if (from && to) {
-    filters.push('DATE(DOCS.created_at) BETWEEN ? AND ?');
+    filters.push("DATE(DOCS.created_at) BETWEEN ? AND ?");
     filterValues.push(from, to);
   } else if (from) {
-    filters.push('DATE(DOCS.created_at) >= ?');
+    filters.push("DATE(DOCS.created_at) >= ?");
     filterValues.push(from);
   } else if (to) {
-    filters.push('DATE(DOCS.created_at) <= ?');
+    filters.push("DATE(DOCS.created_at) <= ?");
     filterValues.push(to);
   }
 
-  const filterQuery = filters.join(' AND ');
+  const filterQuery = filters.join(" AND ");
 
   // Query to fetch service data
   const servicesQuery = `
@@ -123,8 +123,8 @@ exports.getServices = catchAsync(async (req, res, next) => {
   const [totalRecords] = await db(totalRecordsQuery, filterValues);
 
   res.status(200).json({
-    status: 'success',
-    message: 'Data Retrieved successfully',
+    status: "success",
+    message: "Data Retrieved successfully",
     data: {
       total_records: totalRecords.total || 0,
       services_list: servicesList,
@@ -137,10 +137,10 @@ exports.changeServiceStatus = catchAsync(async (req, res, next) => {
     req.body;
 
   const statusQuery = `UPDATE tbl_doctor_services SET approval_status = ? WHERE request_id = ?`;
-  if (`${status}` !== '4') {
+  if (`${status}` !== "4") {
     const result = await db(statusQuery, [status, requestId]);
 
-    if (result.affectedRows === 0) return next(new AppError('No Record Found'));
+    if (result.affectedRows === 0) return next(new AppError("No Record Found"));
   }
 
   const logquery = `INSERT INTO tbl_service_status_tracking (request_id, action, action_by, remarks,team_name,person_name,task_status,role)
@@ -157,19 +157,19 @@ exports.changeServiceStatus = catchAsync(async (req, res, next) => {
     teamName,
     personName,
     taskstatus,
-    'Admin',
+    "Admin",
   ];
 
   await db(logquery, values);
 
   res.status(200).json({
-    status: 'success',
-    message: 'Request status Updated',
+    status: "success",
+    message: "Request status Updated",
   });
 });
 
 const DoctorPortfolioQueryTemplates = {
-  'Personal Details': `
+  "Personal Details": `
       SELECT  
         doc_id AS "Doctor Code",
         full_name AS "Doctor Name",
@@ -184,20 +184,20 @@ const DoctorPortfolioQueryTemplates = {
       LEFT JOIN tbl_why_to_choose_doctor_title WCD ON DPD.why_choose_title_id = WCD.id
       WHERE DPD.request_id = ? AND DPD.status = 1
     `,
-  'Contact Details': `SELECT contact_type AS "Contact Type",
+  "Contact Details": `SELECT contact_type AS "Contact Type",
                           contact_person AS "Contact Person",
                           number AS "Contact Number",mail,
                           start_time AS "Start Time",end_time AS "End Time",
                           available_days AS "Available Days"
                         FROM tbl_contact_details
                         WHERE request_id = ? AND status = 1`,
-  'Educational Details': `SELECT DD.degree_name AS "Degree Name" ,DS.spec_name AS "Specialized In",
+  "Educational Details": `SELECT DD.degree_name AS "Degree Name" ,DS.spec_name AS "Specialized In",
                               college_name AS "College Name", place, year
                             FROM  tbl_doc_educational_details DED
                             LEFT JOIN tbl_doctor_degrees DD ON DED.degree_id = DD.degree_id
                             LEFT JOIN tbl_doctor_specialities DS ON DED.specialized_in =  DS.spec_id
                             WHERE DED.request_id = ? AND DED.status = 1; `,
-  'Work Experience': `SELECT hospital_name AS "Hospital Name",department,designation,
+  "Work Experience": `SELECT hospital_name AS "Hospital Name",department,designation,
                           location,DATE_FORMAT(joined_date , '%d-%m-%Y') AS "Practicing Since",
                           surgeries_count AS "Surgeries count",patients_count AS "Patients count",
                           CASE 
@@ -207,26 +207,26 @@ const DoctorPortfolioQueryTemplates = {
                           DATE_FORMAT(relieved_date , '%d-%m-%Y') as  "Relieved Date"
                         FROM tbl_work_experience
                         WHERE request_id = ? AND status = 1`,
-  'Social Media': `SELECT name AS "Social Media" , url FROM tbl_social_media WHERE request_id = ? AND status= 1`,
-  'Domain URL': `SELECT domain_url AS "Domain" FROM tbl_website_domain WHERE request_id = ? AND status = 1`,
-  'Website Media': `SELECT 
+  "Social Media": `SELECT name AS "Social Media" , url FROM tbl_social_media WHERE request_id = ? AND status= 1`,
+  "Domain URL": `SELECT domain_url AS "Domain" FROM tbl_website_domain WHERE request_id = ? AND status = 1`,
+  "Website Media": `SELECT 
                     CONCAT('{{HOST}}/images/website/',image_name) AS "Image Url",image_type AS "Image Type"
                   FROM  tbl_website_images
                   WHERE request_id = ? AND status = 1`,
-  'Theme Details': `SELECT WT.theme_name AS "Theme Name", 
+  "Theme Details": `SELECT WT.theme_name AS "Theme Name", 
                       CONCAT('{{HOST}}/images/themes/',WT.theme_img)  AS "Teme Images",
                         WT.theme_url AS "Preview Url"  
                       FROM tbl_doc_website_details WD
                       LEFT JOIN tbl_website_themes WT ON WD.theme_id = WT.id
                       WHERE request_id = ? `,
-  'Awards & Recognitions': `SELECT award_name AS "Award Name",excellence_in AS "Excellence In", 
+  "Awards & Recognitions": `SELECT award_name AS "Award Name",excellence_in AS "Excellence In", 
                                 awarded_by AS "Awarded By",year 
                               FROM tbl_awards_recognitions
                               WHERE request_id = ? AND status = 1`,
 };
 
 const smmQueries = {
-  'SMM Data': `
+  "SMM Data": `
       SELECT
         DD.doctor_name AS "Doctor Name" ,
         SMD.doctor_code AS "Doctor Code", 
@@ -327,14 +327,14 @@ exports.getServiceRequestDetails = catchAsync(async (req, res, next) => {
   const { requestId, serviceId } = req.body;
 
   if (!requestId) {
-    return res.status(400).json({ message: 'Missing requestId in body' });
+    return res.status(400).json({ message: "Missing requestId in body" });
   }
 
-  const host = `${req.protocol}://${req.get('host')}/api`;
+  const host = `${req.protocol}://${req.get("host")}/api`;
   const serviceQueries = handleSelectedService(serviceId, host);
 
   const tableQueries = {
-    'Request Details': `SELECT  DOS.request_id AS "Request Id",DS.service_name AS service,
+    "Request Details": `SELECT  DOS.request_id AS "Request Id",DS.service_name AS service,
                   DOD.doctor_name AS "Doctor Name",DOD.category AS specialization, 
                   IF(DOS.submit_status = 1, 'Submitted', 'In-progress') AS "Request status",
                   IFNULL(ADSM.status_name, '') AS "Current status",
@@ -353,7 +353,7 @@ exports.getServiceRequestDetails = catchAsync(async (req, res, next) => {
   };
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Your App';
+  workbook.creator = "Your App";
   workbook.created = new Date();
   try {
     for (const [sheetName, query] of Object.entries(tableQueries)) {
@@ -373,7 +373,7 @@ exports.getServiceRequestDetails = catchAsync(async (req, res, next) => {
         // Apply bold only to the header row
         sheet.getRow(1).eachCell((cell) => {
           cell.font = { bold: true };
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          cell.alignment = { vertical: "middle", horizontal: "center" };
         });
 
         rows.forEach((row) => {
@@ -384,16 +384,16 @@ exports.getServiceRequestDetails = catchAsync(async (req, res, next) => {
 
             // Detect URL-like fields (e.g., fields with 'http', 'https', or filenames)
             const isUrl =
-              typeof value === 'string' &&
-              (value.startsWith('http') ||
+              typeof value === "string" &&
+              (value.startsWith("http") ||
                 value.match(/\.(pdf|png|jpg|jpeg|webp)$/i));
 
             if (isUrl) {
               cell.value = {
-                text: 'Open Link',
+                text: "Open Link",
                 hyperlink: value,
               };
-              cell.font = { color: { argb: 'FF0000FF' }, underline: true }; // Style like link
+              cell.font = { color: { argb: "FF0000FF" }, underline: true }; // Style like link
             } else {
               cell.value = value;
             }
@@ -404,7 +404,7 @@ exports.getServiceRequestDetails = catchAsync(async (req, res, next) => {
         sheet.columns.forEach((col) => {
           let maxLength = col.header.length;
           col.eachCell({ includeEmpty: true }, (cell) => {
-            const val = cell.value ? cell.value.toString() : '';
+            const val = cell.value ? cell.value.toString() : "";
             if (val.length > maxLength) {
               maxLength = val.length;
             }
@@ -412,26 +412,26 @@ exports.getServiceRequestDetails = catchAsync(async (req, res, next) => {
           col.width = maxLength + 5;
         });
       } else {
-        sheet.addRow(['No data found for this sheet.']).font = { italic: true };
+        sheet.addRow(["No data found for this sheet."]).font = { italic: true };
       }
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
 
     res.setHeader(
-      'Content-Disposition',
+      "Content-Disposition",
       `attachment; filename=Request_${requestId}.xlsx`
     );
     res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
     res.send(buffer);
   } catch (err) {
-    console.error('Excel generation failed:', err);
+    console.error("Excel generation failed:", err);
     return res
       .status(500)
-      .json({ message: 'Internal Server Error. Failed to generate Excel.' });
+      .json({ message: "Internal Server Error. Failed to generate Excel." });
   }
 });
 
@@ -482,9 +482,9 @@ exports.getServiceRequestDetails = catchAsync(async (req, res, next) => {
 //               cell.font = { color: { argb: 'FF0000FF' }, underline: true };
 //             }
 //           } else {
-//             cell.value = value;
+//             cell.value = value;✅
 //           }
-//           colIdx++;
+//
 //         }
 //       }
 

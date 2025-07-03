@@ -1,8 +1,8 @@
-const { db } = require('../../dbConfig');
-const jwt = require('jsonwebtoken');
+const { db } = require("../../dbConfig");
+const jwt = require("jsonwebtoken");
 
-const AppError = require('../../Utils/appError');
-const catchAsync = require('../../Utils/catchAsync');
+const AppError = require("../../Utils/appError");
+const catchAsync = require("../../Utils/catchAsync");
 
 exports.adminLogin = catchAsync(async (req, res, next) => {
   const { userId, password } = req.body;
@@ -14,18 +14,21 @@ exports.adminLogin = catchAsync(async (req, res, next) => {
 
   const [user] = await db(query, [userId]);
 
-  if (!user) return next(new AppError('Invalid userId', 401));
+  if (!user) return next(new AppError("Invalid userId", 401));
 
   const isMatch = password === user.password;
-  if (!isMatch) return next(new AppError('Invalid password', 401));
+  if (!isMatch) return next(new AppError("Invalid password", 401));
 
   const token = jwt.sign({ id: user.emp_id }, process.env.JWT_ADMIN_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
 
-  exports.insertLoginLogs({ userId: userId, role: user.role, action: 'Login' });
+  // Remove password before sending the response
+  delete user.password;
+
+  exports.insertLoginLogs({ userId: userId, role: user.role, action: "Login" });
   res.status(200).json({
-    status: 'success',
+    status: "success",
     user,
     token,
   });
@@ -41,10 +44,10 @@ exports.userLogin = catchAsync(async (req, res, next) => {
     `;
   const [user] = await db(query, [userId]);
 
-  if (!user) return next(new AppError('Invalid userId', 401));
+  if (!user) return next(new AppError("Invalid userId", 401));
 
   const isMatch = password === user.password;
-  if (!isMatch) return next(new AppError('Invalid password', 401));
+  if (!isMatch) return next(new AppError("Invalid password", 401));
 
   const token = jwt.sign({ id: user.emp_code }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
@@ -52,12 +55,12 @@ exports.userLogin = catchAsync(async (req, res, next) => {
 
   exports.insertLoginLogs({
     userId: userId,
-    role: 'user',
-    action: 'Login',
+    role: "user",
+    action: "Login",
   });
 
   res.status(200).json({
-    status: 'success',
+    status: "success",
     user,
     token,
   });
@@ -84,7 +87,7 @@ exports.resetPasswword = catchAsync(async (req, res, next) => {
   exports.insertLoginLogs({
     userId: req.user.emp_id,
     role: req.user.role,
-    action: 'Reset password',
+    action: "Reset password",
   });
 
   const JwtToken = jwt.sign(
@@ -96,8 +99,8 @@ exports.resetPasswword = catchAsync(async (req, res, next) => {
   );
 
   res.status(200).json({
-    status: 'success',
-    message: 'Password reset Sucessfully',
+    status: "success",
+    message: "Password reset Sucessfully",
     token: JwtToken,
   });
 });
@@ -105,6 +108,6 @@ exports.resetPasswword = catchAsync(async (req, res, next) => {
 exports.insertLoginLogs = async (logdata) => {
   const { userId, role, action } = logdata;
   const query =
-    'INSERT INTO tbl_login_logs (emp_id, emp_role,action) VALUES (?,?, ?)';
+    "INSERT INTO tbl_login_logs (emp_id, emp_role,action) VALUES (?,?, ?)";
   await db(query, [userId, role, action]);
 };

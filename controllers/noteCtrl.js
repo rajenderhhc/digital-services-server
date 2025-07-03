@@ -1,29 +1,37 @@
-const { db } = require('../dbConfig');
-const catchAsync = require('../Utils/catchAsync');
+const { db } = require("../dbConfig");
+const catchAsync = require("../Utils/catchAsync");
 
 exports.getAdminNotifications = catchAsync(async (req, res, next) => {
   const { divisions, services, emp_id } = req.user;
 
-  const filters = ['status = 1'];
+  const filters = ["status = 1"];
   const filterValues = [];
 
+  const parseJSON = (value) => {
+    try {
+      return JSON.parse(value);
+    } catch (e) {
+      return [];
+    }
+  };
+
   // Handle divisions filter
-  const parsedDivisions = divisions !== 'All' ? parseJSON(divisions) : [];
+  const parsedDivisions = divisions !== "All" ? parseJSON(divisions) : [];
   if (parsedDivisions.length) {
     filters.push(
-      `division_id IN (${parsedDivisions.map(() => '?').join(', ')})`
+      `division_id IN (${parsedDivisions.map(() => "?").join(", ")})`
     );
     filterValues.push(...parsedDivisions);
   }
 
   // Handle services filter
-  const parsedServices = services !== 'All' ? parseJSON(services) : [];
+  const parsedServices = services !== "All" ? parseJSON(services) : [];
   if (parsedServices.length) {
-    filters.push(`service_id IN (${parsedServices.map(() => '?').join(', ')})`);
+    filters.push(`service_id IN (${parsedServices.map(() => "?").join(", ")})`);
     filterValues.push(...parsedServices);
   }
 
-  const filterQuery = filters.join(' AND ');
+  const filterQuery = filters.join(" AND ");
   req.filterQuery = filterQuery;
   req.filterValues = filterValues;
   req.emp_id = emp_id;
@@ -62,7 +70,7 @@ exports.getNotifications = catchAsync(async (req, res, next) => {
     return res.json({ unread_count: 0, unread_messages: [] });
   }
 
-  const trackingPlaceholders = trackingIds.map(() => '?').join(', ');
+  const trackingPlaceholders = trackingIds.map(() => "?").join(", ");
 
   // Step 2: Get unread message count and last tracking ID per request
   const unreadSummary = await db(
@@ -87,7 +95,7 @@ exports.getNotifications = catchAsync(async (req, res, next) => {
   }
 
   const lastTrackingIds = unreadSummary.map((r) => r.last_tracking_id);
-  const lastPlaceholders = lastTrackingIds.map(() => '?').join(', ');
+  const lastPlaceholders = lastTrackingIds.map(() => "?").join(", ");
 
   // Step 3: Get details of the last unread messages
   const lastMessages = await db(
@@ -130,15 +138,15 @@ exports.getNotifications = catchAsync(async (req, res, next) => {
 
 exports.readNotifications = catchAsync(async (req, res, next) => {
   const { trackingIds } = req.body;
-  const { emp_code = '', emp_id = '' } = req.user;
+  const { emp_code = "", emp_id = "" } = req.user;
 
   if (!Array.isArray(trackingIds) || trackingIds.length === 0) {
-    return res.status(400).json({ message: 'No trackingIds provided.' });
+    return res.status(400).json({ message: "No trackingIds provided." });
   }
 
   const values = trackingIds.map((id) => [id, emp_code || emp_id]);
 
-  const placeholders = values.map(() => '(?, ?)').join(', ');
+  const placeholders = values.map(() => "(?, ?)").join(", ");
 
   const query = `INSERT IGNORE INTO tbl_message_reads (tracking_id, user_id) VALUES ${placeholders}`;
 
@@ -146,7 +154,7 @@ exports.readNotifications = catchAsync(async (req, res, next) => {
 
   await db(query, flatValues);
 
-  res.json({ message: 'Marked as read successfully.' });
+  res.json({ message: "Marked as read successfully." });
 });
 
 exports.leaveaNote = catchAsync(async (req, res, next) => {
@@ -154,10 +162,10 @@ exports.leaveaNote = catchAsync(async (req, res, next) => {
   const logquery = `INSERT INTO tbl_service_status_tracking (request_id, action, action_by, remarks,role)
                     VALUES (? ,?,?,?,?)`;
 
-  const role = req.user.emp_id ? 'Admin' : 'user';
+  const role = req.user.emp_id ? "Admin" : "user";
   const values = [
     requestId,
-    'Note',
+    "Note",
     req.user.emp_id || req.user.emp_code,
     message,
     role,
@@ -165,8 +173,8 @@ exports.leaveaNote = catchAsync(async (req, res, next) => {
   const result = await db(logquery, values);
 
   res.status(200).json({
-    status: 'success',
-    message: 'Request status Updated',
+    status: "success",
+    message: "Request status Updated",
     data: result.insetId,
   });
 });
@@ -206,8 +214,8 @@ ORDER BY SST.action_at ASC;
   const result = await db(logquery, [ID, requestId]);
 
   res.status(200).json({
-    status: 'success',
-    message: 'Request status Updated',
+    status: "success",
+    message: "Request status Updated",
     data: result,
   });
 });

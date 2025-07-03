@@ -1,6 +1,6 @@
-const AppError = require('../../Utils/appError');
-const catchAsync = require('../../Utils/catchAsync');
-const { db } = require('../../dbConfig');
+const AppError = require("../../Utils/appError");
+const catchAsync = require("../../Utils/catchAsync");
+const { db } = require("../../dbConfig");
 
 exports.getServies = catchAsync(async (req, res, next) => {
   const query = `SELECT id, service_name  FROM tbl_digital_services WHERE status  = 1 ORDER BY service_name`;
@@ -15,14 +15,21 @@ exports.getDivisions = catchAsync(async (req, res, next) => {
 });
 
 exports.getSpecialities = catchAsync(async (req, res, next) => {
-  const query = `SELECT spec_id, spec_name FROM tbl_doctor_specialities WHERE status  = 1 ORDER BY spec_id DESC `;
+  const query = `
+    SELECT spec_id, spec_name 
+    FROM tbl_doctor_specialities 
+    WHERE status = 1 
+    ORDER BY 
+      CASE WHEN spec_name = 'Other' THEN 1 ELSE 0 END,
+      spec_name
+  `;
   const specialities = await db(query);
   res.status(200).json(specialities);
 });
 
 exports.getWebsiteThems = catchAsync(async (req, res, next) => {
   const query = `SELECT id, CONCAT('${req.protocol}://${req.get(
-    'host'
+    "host"
   )}/api/images/themes/',theme_img) AS theme_img, theme_name, theme_url FROM tbl_website_themes WHERE status  = 1`;
   const webThems = await db(query);
 

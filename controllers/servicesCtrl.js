@@ -38,6 +38,7 @@ exports.serviceFormFillstatus = catchAsync(async (req, res, next) => {
 
 exports.getServices = catchAsync(async (req, res, next) => {
   const { empId, limit, pageNumber = 1, serviceId, status } = req.body;
+
   const offset = limit * (pageNumber - 1);
 
   const filters = ["DOCS.status = 1"];
@@ -47,7 +48,7 @@ exports.getServices = catchAsync(async (req, res, next) => {
     filters.push("DOCS.created_by = ?");
     filterValues.push(empId);
   } else {
-    const { query, values } = await hirarchyFilter(req.user,"DOCS.");
+    const { query, values } = await hirarchyFilter(req.user, "DOCS.");
     filters.push(query);
     filterValues.push(...values);
   }
@@ -182,6 +183,7 @@ exports.submitService = catchAsync(async (req, res, next) => {
       UPDATE tbl_doctor_services 
       SET submit_status = 1  ,submit_on = ? , approval_status = 1,submited_by = ?
       WHERE request_id = ?`;
+
   await db(insertQuery, [today, req.user.emp_code, requestId]);
   res.status(200).json({
     status: "success",
