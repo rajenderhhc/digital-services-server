@@ -1,28 +1,28 @@
-const moment = require('moment');
-const AppError = require('../../Utils/appError');
-const catchAsync = require('../../Utils/catchAsync');
-const { db } = require('../../dbConfig');
+const moment = require("moment");
+const AppError = require("../../Utils/appError");
+const catchAsync = require("../../Utils/catchAsync");
+const { db } = require("../../dbConfig");
 
 exports.workExprenceData = catchAsync(async (req, res, next) => {
   const { experienceData, requestId, doc_id } = req.body;
 
   if (!Array.isArray(experienceData) || experienceData.length === 0) {
-    return next(new AppError('Invalid or empty experence data', 400));
+    return next(new AppError("Invalid or empty experence data", 400));
   }
-
+  console.log(experienceData);
   const values = experienceData.map((w) => [
-    w.id === '' ? null : w.id,
+    w.id === "" ? null : w.id,
     requestId,
     doc_id,
     w.hospitalName,
     w.department,
     w.designation,
     w.location,
-    moment(w.practicingSince).format('YYYY-MM-DD'),
+    w.practicingSince ? moment(w.practicingSince).format("YYYY-MM-DD") : null,
     w.surgeriesCount,
     w.patientsCount,
     w.isRelieved,
-    w.relievedDate ? moment(w.relievedDate).format('YYYY-MM-DD') : null,
+    w.relievedDate ? moment(w.relievedDate).format("YYYY-MM-DD") : null,
     req.user.emp_code,
   ]);
 
@@ -49,11 +49,11 @@ exports.workExprenceData = catchAsync(async (req, res, next) => {
   const insertResult = await db(query, [values]);
 
   res.status(200).json({
-    status: 'success',
+    status: "success",
     message:
       insertResult.affectedRows > experienceData.length
-        ? 'Records updated'
-        : 'Records inserted',
+        ? "Records updated"
+        : "Records inserted",
     data: insertResult,
   });
 });
@@ -67,8 +67,8 @@ exports.getWorkExprence = catchAsync(async (req, res, next) => {
                 WHERE request_id = ? AND status = 1`;
   const experince_data = await db(query, [reqId]);
   res.status(200).json({
-    status: 'success',
-    message: 'Data Retrived Successfully',
+    status: "success",
+    message: "Data Retrived Successfully",
     data: { fill_status: req.fill_status || null, experince_data },
   });
 });
@@ -81,8 +81,8 @@ exports.deleteWorkExprence = catchAsync(async (req, res, next) => {
                 WHERE request_id = ? AND id = ?`;
   const result = await db(query, [reqId, id]);
   res.status(200).json({
-    status: 'success',
-    message: 'Record Deleted Successfully',
+    status: "success",
+    message: "Record Deleted Successfully",
     data: result.affectedRows,
   });
 });

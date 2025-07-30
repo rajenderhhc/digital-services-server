@@ -1,6 +1,6 @@
-const { db } = require('../dbConfig');
-const AppError = require('./appError');
-const catchAsync = require('./catchAsync');
+const { db } = require("../dbConfig");
+const AppError = require("./appError");
+const catchAsync = require("./catchAsync");
 
 const generateRequestId = (division, service) => {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -8,23 +8,21 @@ const generateRequestId = (division, service) => {
   const parts = [];
 
   if (division != null) {
-    const cleanDivision = division.trim().replace(/\s+/g, '');
+    const cleanDivision = division.trim().replace(/\s+/g, "");
     if (cleanDivision) parts.push(cleanDivision);
   }
 
   if (service != null) {
-    const cleanService = service.trim().replace(/\s+/g, '');
+    const cleanService = service.toString().trim().replace(/\s+/g, "");
     if (cleanService) parts.push(cleanService);
   }
-
   parts.push(timestamp);
-
-  return parts.join('-');
+  return parts.join("-");
 };
 
 const updateFromFillstatus = catchAsync(async (req, res, next) => {
   const { requestId, formId, fillStatus } = req.body;
-  if (!requestId || requestId === '') return;
+  if (!requestId || requestId === "") return;
   const fillQuery = `
     INSERT INTO tbl_service_from_fill_status 
     (request_id, form_id, fill_status, create_by) 
@@ -36,12 +34,12 @@ const updateFromFillstatus = catchAsync(async (req, res, next) => {
 
   await db(fillQuery, [requestId, formId, fillStatus, req.user.emp_code]);
 
-  if (fillStatus === '1') {
+  if (fillStatus === "1") {
     next();
   } else {
     res.status(200).json({
-      status: 'success',
-      message: 'Updated Successfully',
+      status: "success",
+      message: "Updated Successfully",
     });
   }
 });
@@ -58,8 +56,8 @@ const getFormFillStatus = catchAsync(async (req, res, next) => {
 
   if (!result || result.length === 0) {
     return res.status(200).json({
-      status: 'success',
-      message: 'Data Retrieved successfully',
+      status: "success",
+      message: "Data Retrieved successfully",
       data: { fill_status: null, formData: null },
     });
   }
@@ -72,8 +70,8 @@ const getFormFillStatus = catchAsync(async (req, res, next) => {
   }
 
   res.status(200).json({
-    status: 'success',
-    message: 'Data Retrieved successfully',
+    status: "success",
+    message: "Data Retrieved successfully",
     data: { fill_status, formData: null },
   });
 });
@@ -82,7 +80,7 @@ const checkTheServiceReqLimit = catchAsync(async (req, res, next) => {
   const { requestId, serviceId, doctorCode } = req.body;
 
   // Skip limit check if requestId is present
-  if (requestId && requestId.trim() !== '') return next();
+  if (requestId && requestId.trim() !== "") return next();
 
   // Fetch service details
   const serviceQuery = `
@@ -93,7 +91,7 @@ const checkTheServiceReqLimit = catchAsync(async (req, res, next) => {
   const serviceResult = await db(serviceQuery, [serviceId]);
 
   if (!serviceResult || serviceResult.length === 0) {
-    return next(new AppError('No service found.', 400));
+    return next(new AppError("No service found.", 400));
   }
 
   const { is_restrict, no_of_req } = serviceResult[0];
@@ -114,7 +112,7 @@ const checkTheServiceReqLimit = catchAsync(async (req, res, next) => {
     usageResult.length > 0 ? Number(usageResult[0].req_count) : 0;
 
   if (currentUsage >= Number(no_of_req)) {
-    return next(new AppError('Requests limit exceeded for this service.', 400));
+    return next(new AppError("Requests limit exceeded for this service.", 400));
   }
 
   next();

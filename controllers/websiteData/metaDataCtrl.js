@@ -1,33 +1,33 @@
-const { db } = require('../../dbConfig');
-const sharp = require('sharp');
+const { db } = require("../../dbConfig");
+const sharp = require("sharp");
 
-const path = require('path');
-const fs = require('fs');
+const path = require("path");
+const fs = require("fs");
 
-const { multerInstance, sanitizeFilename } = require('../../Utils/multer');
-const AppError = require('../../Utils/appError');
-const catchAsync = require('../../Utils/catchAsync');
+const { multerInstance, sanitizeFilename } = require("../../Utils/multer");
+const AppError = require("../../Utils/appError");
+const catchAsync = require("../../Utils/catchAsync");
 
 exports.getWebsiteData = catchAsync(async (req, res, next) => {
   const { reqId } = req.params;
 
   if (!reqId) {
-    return next(new AppError('No Request ID provided', 400));
+    return next(new AppError("No Request ID provided", 400));
   }
   const query = `SELECT request_id, theme_id FROM tbl_doc_website_details WHERE request_id = ? `;
 
   const result = await db(query, [reqId]);
 
-  let theme_id = '';
+  let theme_id = "";
   if (result.length > 0) {
     theme_id = result[0].theme_id;
   }
   res.status(200).json({
-    status: 'success',
-    message: 'Data retrieved successfully',
+    status: "success",
+    message: "Data retrieved successfully",
     data: {
       fill_status: req.fill_status || null,
-      theme_id: theme_id || '',
+      theme_id: theme_id || "",
     },
   });
 });
@@ -46,15 +46,21 @@ exports.websiteData = catchAsync(async (req, res, next) => {
 
   const result = await db(query, values);
 
-  if (result.affectedRows === 1) {
-    next();
-  } else {
-    res.status(200).json({
-      status: 'success',
-      message: result.affectedRows === 1 ? 'Record inserted' : 'Record updated',
-      data: requestId,
-    });
-  }
+  res.status(200).json({
+    status: "success",
+    message: result.affectedRows === 1 ? "Record inserted" : "Record updated",
+    data: requestId,
+  });
+
+  // if (result.affectedRows === 1) {
+  //   next();
+  // } else {
+  //   res.status(200).json({
+  //     status: 'success',
+  //     message: result.affectedRows === 1 ? 'Record inserted' : 'Record updated',
+  //     data: requestId,
+  //   });
+  // }
 });
 
 exports.websiteDomain = catchAsync(async (req, res, next) => {
@@ -63,7 +69,7 @@ exports.websiteDomain = catchAsync(async (req, res, next) => {
   if (!domainUrl || !requestId) {
     return res
       .status(400)
-      .json({ status: 'fail', message: 'Missing parameters' });
+      .json({ status: "fail", message: "Missing parameters" });
   }
 
   const values = [requestId, domainUrl, req?.user?.emp_code];
@@ -79,8 +85,8 @@ exports.websiteDomain = catchAsync(async (req, res, next) => {
   const result = await db(query, values);
 
   res.status(200).json({
-    status: 'success',
-    message: result.affectedRows === 1 ? 'Record inserted' : 'Record updated',
+    status: "success",
+    message: result.affectedRows === 1 ? "Record inserted" : "Record updated",
     data: result?.insertId || null,
   });
 });
@@ -93,16 +99,16 @@ exports.getWebsiteDomain = catchAsync(async (req, res, next) => {
 
     const result = await db(query, [reqId]);
 
-    let domain_url = '';
+    let domain_url = "";
     if (result.length > 0) {
       domain_url = result[0].domain_url;
     }
     res.status(200).json({
-      status: 'success',
-      message: 'Data retrieved successfully',
+      status: "success",
+      message: "Data retrieved successfully",
       data: {
         fill_status: req.fill_status || null,
-        domain_url: domain_url || '',
+        domain_url: domain_url || "",
       },
     });
   } catch (error) {
@@ -110,14 +116,14 @@ exports.getWebsiteDomain = catchAsync(async (req, res, next) => {
   }
 });
 
-const uploadPath = path.join(__dirname, '../../uploads/websiteImages/');
+const uploadPath = path.join(__dirname, "../../uploads/websiteImages/");
 
 // Ensure the upload directory exists
 if (!fs.existsSync(uploadPath)) {
   fs.mkdirSync(uploadPath, { recursive: true });
 }
 
-exports.upload = multerInstance.array('webImage', 10);
+exports.upload = multerInstance.array("webImage", 10);
 
 const processImage = async (file, folderPath) => {
   const imageName = `${Date.now()}-${sanitizeFilename(file.originalname)}`;
@@ -130,14 +136,14 @@ const processImage = async (file, folderPath) => {
 exports.updateStoreWebImage = catchAsync(async (req, res, next) => {
   if (
     req.files &&
-    !req.files.every((file) => file.mimetype.startsWith('image'))
+    !req.files.every((file) => file.mimetype.startsWith("image"))
   ) {
-    return next(new AppError('Only image files are allowed', 400));
+    return next(new AppError("Only image files are allowed", 400));
   }
 
   const { imagesData } = req.body;
   if (!imagesData) {
-    return next(new AppError('Missing imagesData in request body', 400));
+    return next(new AppError("Missing imagesData in request body", 400));
   }
 
   const parsedImagesData = JSON.parse(imagesData);
@@ -145,12 +151,12 @@ exports.updateStoreWebImage = catchAsync(async (req, res, next) => {
   const updatedImagesData = [];
 
   for (let webIm of parsedImagesData) {
-    if (typeof webIm.webImage === 'string') {
+    if (typeof webIm.webImage === "string") {
       const imageName = path.basename(webIm.webImage);
       updatedImagesData.push({ ...webIm, webImage: imageName });
     } else {
       if (fileIndex >= req.files.length) {
-        return next(new AppError('Not enough files uploaded', 400));
+        return next(new AppError("Not enough files uploaded", 400));
       }
       const imageName = await processImage(req.files[fileIndex], uploadPath);
       updatedImagesData.push({ ...webIm, webImage: imageName });
@@ -167,7 +173,7 @@ exports.websiteImages = catchAsync(async (req, res, next) => {
 
   // Ensure that `id` is either `NULL` or removed if it's not provided
   const values = imagesData.map((image) => [
-    image.id === '' ? null : image.id, // Set id to null if not provided
+    image.id === "" ? null : image.id, // Set id to null if not provided
     requestId,
     image.webImage,
     image.imageType,
@@ -190,9 +196,9 @@ exports.websiteImages = catchAsync(async (req, res, next) => {
 
   // Respond to the client
   res.status(200).json({
-    status: 'success',
+    status: "success",
     message:
-      insertResult.affectedRows > 0 ? 'Records updated' : 'Records inserted',
+      insertResult.affectedRows > 0 ? "Records updated" : "Records inserted",
     data: insertResult,
   });
 });
@@ -202,7 +208,7 @@ exports.getWebsiteImages = catchAsync(async (req, res, next) => {
 
   const query = `SELECT id, 
                     CONCAT('${req.protocol}://${req.get(
-    'host'
+    "host"
   )}/api/images/website/',image_name) AS webImage,image_type
                   FROM  tbl_website_images
                   WHERE request_id = ? AND status = 1`;
@@ -210,8 +216,8 @@ exports.getWebsiteImages = catchAsync(async (req, res, next) => {
   const media_data = await db(query, [reqId]);
 
   res.status(200).json({
-    status: 'success',
-    message: 'Data Retrieved successfully',
+    status: "success",
+    message: "Data Retrieved successfully",
     data: { fill_status: req.fill_status || null, media_data },
   });
 });
@@ -225,19 +231,19 @@ exports.deleteImage = catchAsync(async (req, res, next) => {
 
   if (!deleteIds.length) {
     return res.status(400).json({
-      status: 'fail',
-      message: 'No IDs provided for deletion',
+      status: "fail",
+      message: "No IDs provided for deletion",
     });
   }
 
-  const placeholders = deleteIds.map(() => '?').join(','); // Creates ?,?,? for query
+  const placeholders = deleteIds.map(() => "?").join(","); // Creates ?,?,? for query
   const query = `UPDATE tbl_website_images SET status = 0 WHERE id IN (${placeholders}) AND request_id = ?`;
 
   const result = await db(query, [...deleteIds, reqId]);
 
   res.status(200).json({
-    status: 'success',
-    message: 'Records Deleted successfully',
+    status: "success",
+    message: "Records Deleted successfully",
     data: result?.affectedRows,
   });
 });

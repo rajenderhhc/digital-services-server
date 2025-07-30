@@ -97,6 +97,7 @@ exports.getServices = catchAsync(async (req, res, next) => {
           doctor_name,
           category AS specialization,
           service_id,
+          DOCS.pending_at,
           DATE_FORMAT(created_at, '%d-%b-%Y/ %H:%i:%s') AS created_on,
           IF(DOCS.submit_status = 1, 'Submitted', 'In-progress') AS tse_status,
           IFNULL(ASM.status_name, '') AS admin_status,

@@ -1,9 +1,9 @@
-const { db } = require('../../dbConfig');
-const axios = require('axios');
-const Jwt = require('jsonwebtoken');
+const { db } = require("../../dbConfig");
+const axios = require("axios");
+const Jwt = require("jsonwebtoken");
 
-const loginCtrl = require('./loginCtrl');
-const catchAsync = require('../../Utils/catchAsync');
+const loginCtrl = require("./loginCtrl");
+const catchAsync = require("../../Utils/catchAsync");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -19,7 +19,7 @@ const insertDoctorDetails = async (doctorCode, empId) => {
 
     const { data } = await axios.get(apiUrl);
     if (!data || data.length === 0) {
-      throw new Error('Doctor details not found in API');
+      throw new Error("Doctor details not found in API");
     }
 
     const {
@@ -53,7 +53,7 @@ const insertDoctorDetails = async (doctorCode, empId) => {
 };
 
 exports.insertEmployeeDetails = catchAsync(async (req, res, next) => {
-  const { doctorCode = '', employeeBasicDetails } = req.body;
+  const { doctorCode = "", employeeBasicDetails } = req.body;
 
   const {
     employeeCode,
@@ -69,15 +69,16 @@ exports.insertEmployeeDetails = catchAsync(async (req, res, next) => {
     divisionId,
     divisionName,
     password,
+    emp_code,
   } = employeeBasicDetails;
 
   // If doctorCode is provided, insert doctor details first
   if (doctorCode) {
     try {
-      await insertDoctorDetails(doctorCode, employeeCode);
+      await insertDoctorDetails(doctorCode, employeeCode || emp_code);
     } catch (error) {
       return res.status(500).json({
-        status: 'error',
+        status: "error",
         message: `Doctor insertion failed: ${error.message}`,
       });
     }
@@ -112,17 +113,17 @@ exports.insertEmployeeDetails = catchAsync(async (req, res, next) => {
   const JwtToken = Jwt.sign({ id: employeeCode }, JWT_SECRET);
 
   loginCtrl.insertLoginLogs({
-    userId: employeeCode,
-    role: 'user',
-    action: 'Login',
+    userId: employeeCode || emp_code,
+    role: "user",
+    action: "Login",
   });
 
   res.status(200).json({
-    status: 'success',
+    status: "success",
     message:
       result.affectedRows === 0
-        ? 'Employee already exists'
-        : 'Data saved successfully',
+        ? "Employee already exists"
+        : "Data saved successfully",
     data: result.affectedRows === 0 ? null : result.insertId,
     token: JwtToken,
   });

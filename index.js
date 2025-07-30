@@ -54,7 +54,7 @@ app.all("*", (req, res, next) => {
 app.use(globalErrorHandler);
 
 const server = app.listen(PORT, () => {
-  // console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
 
 process.on("unhandledRejection", (err) => {

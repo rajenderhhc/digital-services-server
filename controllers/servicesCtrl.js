@@ -9,7 +9,7 @@ const { hirarchyFilter } = require("../Utils/hirarchyFilter");
 exports.seriveForms = catchAsync(async (req, res, next) => {
   const { service_id } = req.params;
 
-  const query = `SELECT form_id, form_title FROM tbl_service_forms WHERE service_id = ? AND status = 1`;
+  const query = `SELECT form_id, form_title FROM tbl_service_forms WHERE service_id = ? AND status = 1 ORDER BY position ASC`;
   const result = await db(query, [service_id]);
   res.status(200).json(result);
 });
@@ -19,7 +19,8 @@ exports.serviceFormFillstatus = catchAsync(async (req, res, next) => {
 
   const query = `
     SELECT 
-      SF.form_title, 
+      SF.form_title,
+      SF.position, 
       SF.form_id, 
       FFS.fill_status 
     FROM 
@@ -29,6 +30,7 @@ exports.serviceFormFillstatus = catchAsync(async (req, res, next) => {
       ON FFS.form_id = SF.form_id AND FFS.request_id = ?
     WHERE 
       SF.service_id = ? AND SF.status = 1
+    ORDER BY SF.position ASC
   `;
 
   const result = await db(query, [requestId, serviceId]);
@@ -70,6 +72,7 @@ exports.getServices = catchAsync(async (req, res, next) => {
                               doctor_name,
                               category as specialization,
                               service_id,
+                              DOCS.pending_at,
                               DATE_FORMAT(created_at , '%d-%b-%Y/ %H:%i:%s') AS created_on ,
                               DATE_FORMAT(updated_at , '%d-%b-%Y/ %H:%i:%s') AS updated_on ,
                               IF(DOCS.submit_status = 1, 'Submitted', 'In-progress') AS tse_status,
@@ -150,24 +153,27 @@ exports.getDoctorServices = catchAsync(async (req, res, next) => {
 });
 
 exports.registerService = catchAsync(async (req, res, next) => {
-  const { doctorCode, empId, serviceId, tseCode, divisionId, requestId } =
-    req.body;
+  const { doc_id, empId, serviceId, tseCode, divisionId, requestId } = req.body;
+  const today = moment().format("YYYY-MM-DD HH:mm:ss");
 
-  const query = `INSERT INTO tbl_doctor_services (request_id,doctor_id, service_id, tse_code, division_id,submit_status,created_by)
-                  VALUES(?,?,?,?,?,?,?) `;
+  const query = `INSERT INTO tbl_doctor_services (request_id,doctor_id, service_id, tse_code, division_id,submit_status,created_by,submit_on , approval_status ,submited_by )
+                  VALUES(?,?,?,?,?,?,?,?,?,?) `;
 
   const values = [
     requestId,
-    doctorCode,
+    doc_id,
     serviceId,
     tseCode,
     divisionId,
-    0,
+    1,
+    empId,
+    today,
+    1,
     empId,
   ];
 
   const result = await db(query, values);
-
+  next();
   res.status(200).json({
     status: "success",
     message: "Your Service Request Submitted Successfully",
@@ -194,7 +200,7 @@ exports.submitService = catchAsync(async (req, res, next) => {
 });
 
 exports.addNewService = catchAsync(async (req, res, next) => {
-  const { doctorCode, serviceId, tseCode, requestId, divisionId } = req.body;
+  const { doc_id, serviceId, tseCode, requestId, divisionId } = req.body;
 
   const today = moment().format("YYYY-MM-DD HH:mm:ss");
 
@@ -204,7 +210,7 @@ exports.addNewService = catchAsync(async (req, res, next) => {
 
   const values = [
     requestId,
-    doctorCode,
+    doc_id,
     serviceId,
     tseCode,
     divisionId,
@@ -316,6 +322,7 @@ exports.serviceDetails = catchAsync(async (req, res, next) => {
         DOS.created_by,
         ED.emp_name AS created_name,
         DOS.submited_by,
+        DOS.pending_at,
         EDS.emp_name AS submited_name
       FROM tbl_doctor_services DOS
       LEFT JOIN tbl_digital_services DS ON DOS.service_id = DS.id 
@@ -361,5 +368,17 @@ exports.getServiceHistory = catchAsync(async (req, res, next) => {
     status: "success",
     message: "Service details fetched successfully",
     data: result,
+  });
+});
+
+exports.pendingstatusUpdate = catchAsync(async (req, res, next) => {
+  const { requestId, status } = req.body;
+  const { emp_code } = req.user;
+  const query = `UPDATE tbl_doctor_services SET pending_at = ? , changed_by = ? WHERE request_id = ?;`;
+  const result = await db(query, [status, emp_code, requestId]);
+
+  res.status(200).json({
+    status: "success",
+    message: "Service status updated successfully",
   });
 });

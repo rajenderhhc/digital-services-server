@@ -9,7 +9,6 @@ const getHirachyDetails = async (empId) => {
 };
 
 const hirarchyFilter = async (user, table = "") => {
-  console.log(user);
   if (user.designation_id === "23") {
     const divisionIds = user.division_id.split("~");
     //  const values = divisionIds.length > 1 ? [divisionIds] : divisionIds;
